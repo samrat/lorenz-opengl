@@ -6,9 +6,12 @@
 
 #include "vec3.c"
 
-#define WIDTH 600
-#define HEIGHT 400
-#define STEPS_PER_FRAME 4
+#define WIDTH 800
+#define HEIGHT 600
+
+#define STEPS_PER_FRAME 5
+#define TAIL_LENGTH 1024
+#define SCALE 5.0
 
 float vertices[] = {
   /* position   color             texcoords */
@@ -109,7 +112,7 @@ main() {
   GLFWwindow *window;
 
     /* Create a windowed mode window and its OpenGL context */
-  window = glfwCreateWindow(800, 600, "Open.GL", NULL, NULL);
+  window = glfwCreateWindow(WIDTH, HEIGHT, "Lorenz System", NULL, NULL);
   if (!window) {
     glfwTerminate();
     return -1;
@@ -196,12 +199,10 @@ main() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  float dt = 0.01;
+  float dt = 0.005;
 
   vec3 initial = {0.0, 1.0, 0.0};
   vec3 current = initial;
-
-  #define TAIL_LENGTH 512
 
   vec3 tail[TAIL_LENGTH];
   int tail_index = 0;
@@ -213,14 +214,17 @@ main() {
       tail_index = (tail_index+1) % TAIL_LENGTH;
 
       current = rk4(current, dt);
-      backbuffer[(int)(current.z*3.5)+100][(int)(current.y*3.5)+100][0] = 255;
-      backbuffer[(int)(current.y*3.5)+100][(int)(current.x*3.5)+300][0] = 255;
+
+      /* TODO: move code to set a pixel to a separate function, with
+         bounds checking */
+      backbuffer[(int)(current.z*SCALE)+100][(int)(current.y*SCALE)+100][0] = 255;
+      backbuffer[(int)(current.y*SCALE)+100][(int)(current.x*SCALE)+300][0] = 255;
     }
 
     for (int i = 0; i < TAIL_LENGTH; i++) {
       vec3 c = tail[i];
-      backbuffer[(int)(c.z*3.5)+100][(int)(c.y*3.5)+100][0] = 255;
-      backbuffer[(int)(c.y*3.5)+100][(int)(c.x*3.5)+300][0] = 255;
+      backbuffer[(int)(c.z*SCALE)+100][(int)(c.y*SCALE)+100][0] = 255;
+      backbuffer[(int)(c.y*SCALE)+100][(int)(c.x*SCALE)+300][0] = 255;
     }
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, backbuffer);
