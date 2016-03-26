@@ -8,6 +8,7 @@
 
 #define WIDTH 600
 #define HEIGHT 400
+#define STEPS_PER_FRAME 4
 
 float vertices[] = {
   /* position   color             texcoords */
@@ -201,11 +202,12 @@ main() {
   vec3 current = initial;
 
   while (!glfwWindowShouldClose(window)) {
-    current = rk4(current, dt);
 
-    backbuffer[(int)(current.z*3.5)+100][(int)(current.y*3.5)+100][0] = 255;
-
-    backbuffer[(int)(current.y*3.5)+100][(int)(current.x*3.5)+300][0] = 255;
+    for (int i = 0; i < STEPS_PER_FRAME; i++) {
+      current = rk4(current, dt);
+      backbuffer[(int)(current.z*3.5)+100][(int)(current.y*3.5)+100][0] = 255;
+      backbuffer[(int)(current.y*3.5)+100][(int)(current.x*3.5)+300][0] = 255;
+    }
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, backbuffer);
 
