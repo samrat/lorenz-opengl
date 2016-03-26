@@ -178,7 +178,7 @@ main() {
   /* Texture */
   unsigned char backbuffer[HEIGHT][WIDTH][4];
 
-  memset(backbuffer, 0, HEIGHT*WIDTH*4);
+  memset(backbuffer, 0, sizeof(backbuffer));
 
   GLuint texture;
   glGenTextures(1, &texture);
