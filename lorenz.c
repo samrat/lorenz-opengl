@@ -201,12 +201,26 @@ main() {
   vec3 initial = {0.0, 1.0, 0.0};
   vec3 current = initial;
 
-  while (!glfwWindowShouldClose(window)) {
+  #define TAIL_LENGTH 512
 
+  vec3 tail[TAIL_LENGTH];
+  int tail_index = 0;
+
+  while (!glfwWindowShouldClose(window)) {
+    memset(backbuffer, 0, sizeof(backbuffer));
     for (int i = 0; i < STEPS_PER_FRAME; i++) {
+      tail[tail_index] = current;
+      tail_index = (tail_index+1) % TAIL_LENGTH;
+
       current = rk4(current, dt);
       backbuffer[(int)(current.z*3.5)+100][(int)(current.y*3.5)+100][0] = 255;
       backbuffer[(int)(current.y*3.5)+100][(int)(current.x*3.5)+300][0] = 255;
+    }
+
+    for (int i = 0; i < TAIL_LENGTH; i++) {
+      vec3 c = tail[i];
+      backbuffer[(int)(c.z*3.5)+100][(int)(c.y*3.5)+100][0] = 255;
+      backbuffer[(int)(c.y*3.5)+100][(int)(c.x*3.5)+300][0] = 255;
     }
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, backbuffer);
