@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
@@ -9,6 +10,7 @@
 #define HEIGHT 400
 
 float vertices[] = {
+  /* position   color             texcoords */
   -0.5f,  0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // Top-left
   0.5f,  0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,  // Top-right
   0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,  // Bottom-right
@@ -176,6 +178,8 @@ main() {
   /* Texture */
   unsigned char backbuffer[HEIGHT][WIDTH][4];
 
+  memset(backbuffer, 0, HEIGHT*WIDTH*4);
+
   GLuint texture;
   glGenTextures(1, &texture);
 
@@ -198,9 +202,10 @@ main() {
 
   while (!glfwWindowShouldClose(window)) {
     current = rk4(current, dt);
-    printf("%f %f %f\n", current.x, current.y, current.z);
 
-    backbuffer[(int)current.z+200][(int)current.y+200][0] = 255;
+    backbuffer[(int)(current.z*3.5)+100][(int)(current.y*3.5)+100][0] = 255;
+
+    backbuffer[(int)(current.y*3.5)+100][(int)(current.x*3.5)+300][0] = 255;
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, backbuffer);
 
