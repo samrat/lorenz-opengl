@@ -13,13 +13,15 @@
 
 #define STEPS_PER_FRAME 5
 #define TAIL_LENGTH 1024
-#define SCALE 4.0
 
 static struct {
   GLuint vertex_buffer, element_buffer;
-  GLuint texture;
+  GLuint tail_vertex_buffer;
 
-  GLuint vertex_shader, fragment_shader, program;
+  GLuint projection_vertex_shader;
+  GLuint head_vertex_shader, head_fragment_shader, head_program;
+  GLuint tail_vertex_shader, tail_fragment_shader, tail_program;
+
 
   struct {
     GLuint tex;
@@ -33,18 +35,11 @@ static struct {
 
 } g_gl_state;
 
-float vertices[] = {
-  /* position   color             texcoords */
-  -0.5f,  0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // Top-left
-  0.5f,  0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,  // Top-right
-  0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,  // Bottom-right
-  -0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f  // Bottom-left
+static float position[] = {     /* head position */
+  0.0, 0.0, 0.0,
 };
 
-GLuint elements[] = {
-  0, 1, 2,
-  2, 3, 0
-};
+vec3 tail[TAIL_LENGTH];
 
 static GLuint
 make_buffer(GLenum target,
@@ -53,7 +48,7 @@ make_buffer(GLenum target,
   GLuint buffer;
   glGenBuffers(1, &buffer);
   glBindBuffer(target, buffer);
-  glBufferData(target, buffer_size, buffer_data, GL_STATIC_DRAW);
+  glBufferData(target, buffer_size, buffer_data, GL_DYNAMIC_DRAW);
 
   return buffer;
 }
@@ -104,9 +99,10 @@ make_program(GLuint vertex_shader, GLuint fragment_shader) {
   GLint program_ok;
 
   GLuint program = glCreateProgram();
+  // glAttachShader(program, g_gl_state.projection_vertex_shader);
   glAttachShader(program, vertex_shader);
   glAttachShader(program, fragment_shader);
-  glBindFragDataLocation(g_gl_state.program, 0, "outColor");
+  glBindFragDataLocation(program, 0, "outColor");
   glLinkProgram(program);
 
   glGetProgramiv(program, GL_LINK_STATUS, &program_ok);
@@ -120,100 +116,84 @@ make_program(GLuint vertex_shader, GLuint fragment_shader) {
   return program;
 }
 
-static GLuint
-make_texture() {
-  GLuint texture;
-
-  memset(g_gl_state.backbuffer, 0, sizeof(g_gl_state.backbuffer));
-
-
-  glGenTextures(1, &texture);
-  glBindTexture(GL_TEXTURE_2D, texture);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, g_gl_state.backbuffer);
-
-  return texture;
-}
-
-static void
-send_texture_image() {
-  glBindTexture(GL_TEXTURE_2D, g_gl_state.texture);
-  glTexImage2D(GL_TEXTURE_2D,
-               0,
-               GL_RGBA,
-               WIDTH,
-               HEIGHT,
-               0,
-               GL_RGBA,
-               GL_UNSIGNED_BYTE,
-               g_gl_state.backbuffer);
-}
-
 static int
 make_resources(void) {
   /* Create buffers */
   g_gl_state.vertex_buffer = make_buffer(GL_ARRAY_BUFFER,
-                                         vertices,
-                                         sizeof(vertices));
-  g_gl_state.element_buffer = make_buffer(GL_ELEMENT_ARRAY_BUFFER,
-                                          elements,
-                                          sizeof(elements));
+                                         position,
+                                         sizeof(position));
+  g_gl_state.tail_vertex_buffer = make_buffer(GL_ARRAY_BUFFER,
+                                              tail,
+                                              sizeof(tail));
 
-  /* Create textures */
-  g_gl_state.texture = make_texture();
+  /* g_gl_state.element_buffer = make_buffer(GL_ELEMENT_ARRAY_BUFFER, */
+  /*                                         elements, */
+  /*                                         sizeof(elements)); */
 
   /* Compile GLSL program  */
-  g_gl_state.vertex_shader = make_shader(GL_VERTEX_SHADER,
-                                         "lorenz.vert");
-  g_gl_state.fragment_shader = make_shader(GL_FRAGMENT_SHADER,
-                                           "lorenz.frag");
-  g_gl_state.program = make_program(g_gl_state.vertex_shader,
-                                    g_gl_state.fragment_shader);
+  g_gl_state.projection_vertex_shader = make_shader(GL_VERTEX_SHADER,
+                                                    "project.vert");
+
+  g_gl_state.head_vertex_shader = make_shader(GL_VERTEX_SHADER,
+                                         "head.vert");
+  g_gl_state.head_fragment_shader = make_shader(GL_FRAGMENT_SHADER,
+                                           "head.frag");
+  g_gl_state.head_program = make_program(g_gl_state.head_vertex_shader,
+                                         g_gl_state.head_fragment_shader);
+
+  g_gl_state.tail_vertex_shader = make_shader(GL_VERTEX_SHADER,
+                                              "tail.vert");
+  g_gl_state.tail_fragment_shader = make_shader(GL_FRAGMENT_SHADER,
+                                                "tail.frag");
+  g_gl_state.tail_program = make_program(g_gl_state.tail_vertex_shader,
+                                         g_gl_state.tail_fragment_shader);
+
 
   /* Look up shader variable locations */
   g_gl_state.attributes.position =
-    glGetAttribLocation(g_gl_state.program, "position");
-  g_gl_state.attributes.color =
-    glGetAttribLocation(g_gl_state.program, "color");
-  g_gl_state.attributes.texcoord =
-    glGetAttribLocation(g_gl_state.program, "texcoord");
+    glGetAttribLocation(g_gl_state.head_program, "position");
 
-  g_gl_state.uniforms.tex =
-    glGetUniformLocation(g_gl_state.program, "tex");
+  /* g_gl_state.uniforms.tex = */
+  /*   glGetUniformLocation(g_gl_state.program, "tex"); */
 
   return 1;
 }
 
 static void
 render(GLFWwindow *window) {
-  glUseProgram(g_gl_state.program);
+  glUseProgram(g_gl_state.head_program);
 
   /*  */
 
   glEnableVertexAttribArray(g_gl_state.attributes.position);
   glVertexAttribPointer(g_gl_state.attributes.position,
-                        2, GL_FLOAT, GL_FALSE,
-                        7*sizeof(float), 0);
-
-  glEnableVertexAttribArray(g_gl_state.attributes.color);
-  glVertexAttribPointer(g_gl_state.attributes.color,
                         3, GL_FLOAT, GL_FALSE,
-                        7*sizeof(float), (void*)(2*sizeof(float)));
+                        3*sizeof(float), 0);
 
-  glEnableVertexAttribArray(g_gl_state.attributes.texcoord);
-  glVertexAttribPointer(g_gl_state.attributes.texcoord,
-                        2, GL_FLOAT, GL_FALSE,
-                        7*sizeof(float), (void*)(5*sizeof(float)));
-  glUniform1i(g_gl_state.uniforms.tex, 0);
+  /* glEnableVertexAttribArray(g_gl_state.attributes.color); */
+  /* glVertexAttribPointer(g_gl_state.attributes.color, */
+  /*                       3, GL_FLOAT, GL_FALSE, */
+  /*                       7*sizeof(float), (void*)(2*sizeof(float))); */
+
+  /* glEnableVertexAttribArray(g_gl_state.attributes.texcoord); */
+  /* glVertexAttribPointer(g_gl_state.attributes.texcoord, */
+  /*                       2, GL_FLOAT, GL_FALSE, */
+  /*                       7*sizeof(float), (void*)(5*sizeof(float))); */
+  /* glUniform1i(g_gl_state.uniforms.tex, 0); */
 
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
-  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  glDrawArrays(GL_POINTS, 0, 1);
+
+
+  glUseProgram(g_gl_state.tail_program);
+  glEnableVertexAttribArray(g_gl_state.attributes.position);
+  glVertexAttribPointer(g_gl_state.attributes.position,
+                        TAIL_LENGTH, GL_FLOAT, GL_FALSE,
+                        TAIL_LENGTH*sizeof(float), 0);
+  glDrawArrays(GL_POINTS, 0, TAIL_LENGTH);
+
   glfwSwapBuffers(window);
 }
 
@@ -299,7 +279,6 @@ main() {
   vec3 initial = {0.0, 1.0, 0.0};
   vec3 current = initial;
 
-  vec3 tail[TAIL_LENGTH];
   for (int i = 0; i < TAIL_LENGTH; i++) {
     tail[i].x = 0.0f;
     tail[i].y = 0.0f;
@@ -308,26 +287,26 @@ main() {
   int tail_index = 0;
 
   while (!glfwWindowShouldClose(window)) {
-    memset(g_gl_state.backbuffer, 0, sizeof(g_gl_state.backbuffer));
+    //memset(g_gl_state.backbuffer, 0, sizeof(g_gl_state.backbuffer));
     for (int i = 0; i < STEPS_PER_FRAME; i++) {
       tail[tail_index] = current;
       tail_index = (tail_index+1) % TAIL_LENGTH;
 
       current = rk4(current, dt);
+      position[0] = current.x + 10;
+      position[1] = current.y + 10;
+      position[2] = current.z;
+      // printf("%f %f %f\n", current.x, current.y, current.z);
+      glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer);
+      glBufferData(GL_ARRAY_BUFFER,
+                   sizeof(position), position, GL_DYNAMIC_DRAW);
 
-      /* TODO: move code to set a pixel to a separate function, with
-         bounds checking */
-      g_gl_state.backbuffer[(int)(current.z*SCALE)+100][(int)(current.y*SCALE)+100][0] = 255;
-      g_gl_state.backbuffer[(int)(current.y*SCALE)+100][(int)(current.x*SCALE)+300][0] = 255;
     }
 
-    for (int i = 0; i < TAIL_LENGTH; i++) {
-      vec3 c = tail[i];
-      g_gl_state.backbuffer[(int)(c.z*SCALE)+100][(int)(c.y*SCALE)+100][0] = 255;
-      g_gl_state.backbuffer[(int)(c.y*SCALE)+100][(int)(c.x*SCALE)+300][0] = 255;
-    }
+    glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.tail_vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER,
+                 sizeof(tail), tail, GL_DYNAMIC_DRAW);
 
-    send_texture_image();
     render(window);
 
     glfwPollEvents();
