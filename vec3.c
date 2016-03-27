@@ -3,7 +3,7 @@ typedef struct {
 
 } vec3;
 
-vec3
+static vec3
 vec3_add(vec3 a, vec3 b) {
   vec3 result;
 
@@ -14,7 +14,7 @@ vec3_add(vec3 a, vec3 b) {
   return result;
 }
 
-vec3
+static vec3
 vec3_scale(float t, vec3 a) {
   vec3 result;
 
