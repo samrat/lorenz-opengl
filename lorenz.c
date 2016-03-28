@@ -24,7 +24,7 @@ static struct {
 
 
   struct {
-    GLuint tex;
+    GLuint rotation;
   } uniforms;
 
   struct {
@@ -33,6 +33,10 @@ static struct {
 
   unsigned char backbuffer[HEIGHT][WIDTH][4];
 
+  double xpos, ypos;
+
+  vec3 rotation;
+
 } g_gl_state;
 
 static float position[] = {     /* head position */
@@ -40,6 +44,12 @@ static float position[] = {     /* head position */
 };
 
 vec3 tail[TAIL_LENGTH];
+
+/* static void update_timer(void) { */
+/*   int milliseconds = glfwGetTime() * 1000; */
+/*   g_gl_state.timer = (float)milliseconds * 0.001f; */
+/* } */
+
 
 static GLuint
 make_buffer(GLenum target,
@@ -135,9 +145,9 @@ make_resources(void) {
                                                     "project.vert");
 
   g_gl_state.head_vertex_shader = make_shader(GL_VERTEX_SHADER,
-                                         "head.vert");
+                                              "head.vert");
   g_gl_state.head_fragment_shader = make_shader(GL_FRAGMENT_SHADER,
-                                           "head.frag");
+                                                "head.frag");
   g_gl_state.head_program = make_program(g_gl_state.head_vertex_shader,
                                          g_gl_state.head_fragment_shader);
 
@@ -155,8 +165,9 @@ make_resources(void) {
   g_gl_state.attributes.tail_position =
     glGetAttribLocation(g_gl_state.tail_program, "position");
 
-  /* g_gl_state.uniforms.tex = */
-  /*   glGetUniformLocation(g_gl_state.program, "tex"); */
+
+  g_gl_state.uniforms.rotation =
+    glGetUniformLocation(g_gl_state.tail_program, "rotation");
 
   return 1;
 }
@@ -190,6 +201,11 @@ render(GLFWwindow *window) {
 
 
   glUseProgram(g_gl_state.tail_program);
+  glUniform3f(g_gl_state.uniforms.rotation,
+              g_gl_state.rotation.x,
+              g_gl_state.rotation.y,
+              g_gl_state.rotation.z);
+
   glEnableVertexAttribArray(g_gl_state.attributes.tail_position);
   glVertexAttribPointer(g_gl_state.attributes.tail_position,
                         TAIL_LENGTH, GL_FLOAT, GL_FALSE,
@@ -241,6 +257,65 @@ rk4(vec3 current, float dt) {
   return result;
 }
 
+void
+key_callback(GLFWwindow *window, int key,
+             int scancode, int action, int mods) {
+  if (action == GLFW_RELEASE) {
+    switch(key) {
+    case GLFW_KEY_W: {
+      g_gl_state.rotation.x += 0.01;
+    } break;
+    case GLFW_KEY_A: {
+      g_gl_state.rotation.y -= 0.01;
+    } break;
+    case GLFW_KEY_S: {
+      g_gl_state.rotation.x -= 0.01;
+    } break;
+    case GLFW_KEY_D: {
+      g_gl_state.rotation.y += 0.01;
+    } break;
+    case GLFW_KEY_Q: {
+      g_gl_state.rotation.z += 0.01;
+    } break;
+    case GLFW_KEY_E: {
+      g_gl_state.rotation.z -= 0.01;
+    } break;
+    }
+  }
+}
+
+
+static void
+mouse_button_callback(GLFWwindow *window,
+                      int button,
+                      int action,
+                      int mods) {
+  if (action == GLFW_PRESS) {
+    switch(button) {
+    case GLFW_MOUSE_BUTTON_LEFT: {
+      glfwGetCursorPos(window, &g_gl_state.xpos, &g_gl_state.ypos);
+    } break;
+    }
+  }
+
+  if (action == GLFW_RELEASE) {
+    switch (button) {
+    case GLFW_MOUSE_BUTTON_LEFT: {
+      double xpos, ypos;
+      glfwGetCursorPos(window, &xpos, &ypos);
+
+      double deltax = xpos - g_gl_state.xpos;
+      double deltay = ypos - g_gl_state.ypos;
+
+      g_gl_state.rotation.x = -deltax / 1000;
+      g_gl_state.rotation.y = deltay / 1000;
+    } break;
+
+    }
+  }
+
+}
+
 int
 main() {
   if (!glfwInit())
@@ -264,6 +339,9 @@ main() {
 
   /* Make the window's context current */
   glfwMakeContextCurrent(window);
+
+  glfwSetKeyCallback(window, key_callback);
+  glfwSetMouseButtonCallback(window, mouse_button_callback);
 
   if (gl3wInit() != 0) {
     fprintf(stderr, "GL3W: failed to initialize\n");

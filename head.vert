@@ -2,6 +2,8 @@
 
 in vec3 position;
 
+uniform vec3 rotation;
+
 mat4 view_frustum(float angle_of_view,
                   float aspect_ratio,
                   float z_near,
@@ -26,18 +28,45 @@ mat4 translate(float x, float y, float z) {
               x, y, z, 1.0);
 }
 
-mat4 rotate_x(float theta) {
+mat4 rotate_x(float t) {
+  float st = sin(t);
+  float ct = cos(t);
   return mat4(1.0, 0.0, 0.0, 0.0,
-              0.0, cos(theta), sin(theta), 0.0,
-              0.0, -sin(theta), cos(theta), 0.0,
+              0.0, ct, st, 0.0,
+              0.0, -st, ct, 0.0,
               0.0, 0.0, 0.0, 1.0);
 }
+
+mat4 rotate_y(float t) {
+    float st = sin(t);
+    float ct = cos(t);
+    return mat4(
+        vec4( ct, 0.0,  st, 0.0),
+        vec4(0.0, 1.0, 0.0, 0.0),
+        vec4(-st, 0.0,  ct, 0.0),
+        vec4(0.0, 0.0, 0.0, 1.0)
+    );
+}
+
+mat4 rotate_z(float t) {
+    float st = sin(t);
+    float ct = cos(t);
+    return mat4(
+        vec4( ct,  st, 0.0, 0.0),
+        vec4(-st,  ct, 0.0, 0.0),
+        vec4(0.0, 0.0, 1.0, 0.0),
+        vec4(0.0, 0.0, 0.0, 1.0)
+    );
+}
+
 
 
 void main() {
   gl_Position = view_frustum(radians(45.0), 4.0/3.0, 0.0, 10.0)
     // * translate(cos(timer), 0.0, 3.0+sin(timer))
-    // * rotate_x(0.0)
+    * rotate_x(rotation.x)
+    * rotate_y(rotation.y)
+    * rotate_z(rotation.z)
     * scale(1/25.0, 1.0/25.0, 1.0/25.0)
     * vec4(position, 1.0);
   gl_PointSize = 160.0;
