@@ -28,7 +28,7 @@ static struct {
   } uniforms;
 
   struct {
-    GLuint position, color, texcoord;
+    GLuint head_position, tail_position;
   } attributes;
 
   unsigned char backbuffer[HEIGHT][WIDTH][4];
@@ -150,8 +150,10 @@ make_resources(void) {
 
 
   /* Look up shader variable locations */
-  g_gl_state.attributes.position =
+  g_gl_state.attributes.head_position =
     glGetAttribLocation(g_gl_state.head_program, "position");
+  g_gl_state.attributes.tail_position =
+    glGetAttribLocation(g_gl_state.tail_program, "position");
 
   /* g_gl_state.uniforms.tex = */
   /*   glGetUniformLocation(g_gl_state.program, "tex"); */
@@ -165,8 +167,8 @@ render(GLFWwindow *window) {
 
   /*  */
 
-  glEnableVertexAttribArray(g_gl_state.attributes.position);
-  glVertexAttribPointer(g_gl_state.attributes.position,
+  glEnableVertexAttribArray(g_gl_state.attributes.head_position);
+  glVertexAttribPointer(g_gl_state.attributes.head_position,
                         3, GL_FLOAT, GL_FALSE,
                         3*sizeof(float), 0);
 
@@ -188,8 +190,8 @@ render(GLFWwindow *window) {
 
 
   glUseProgram(g_gl_state.tail_program);
-  glEnableVertexAttribArray(g_gl_state.attributes.position);
-  glVertexAttribPointer(g_gl_state.attributes.position,
+  glEnableVertexAttribArray(g_gl_state.attributes.tail_position);
+  glVertexAttribPointer(g_gl_state.attributes.tail_position,
                         TAIL_LENGTH, GL_FLOAT, GL_FALSE,
                         TAIL_LENGTH*sizeof(float), 0);
   glDrawArrays(GL_POINTS, 0, TAIL_LENGTH);
