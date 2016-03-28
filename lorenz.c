@@ -17,19 +17,30 @@
 static struct {
   GLuint vertex_buffer, element_buffer;
   GLuint tail_vertex_buffer;
+  GLuint tail_index_buffer;
 
   GLuint projection_vertex_shader;
   GLuint head_vertex_shader, head_fragment_shader, head_program;
   GLuint tail_vertex_shader, tail_fragment_shader, tail_program;
 
+  struct {
+    struct {
+      GLuint rotation;
+    } uniforms;
+    struct {
+      GLuint position;
+    } attributes;
+
+  } head;
 
   struct {
-    GLuint rotation;
-  } uniforms;
-
-  struct {
-    GLuint head_position, tail_position;
-  } attributes;
+    struct {
+      GLuint rotation, tail_length;
+    } uniforms;
+    struct {
+      GLuint position, index;
+    } attributes;
+  } tail;
 
   unsigned char backbuffer[HEIGHT][WIDTH][4];
 
@@ -44,6 +55,7 @@ static float position[] = {     /* head position */
 };
 
 vec3 tail[TAIL_LENGTH];
+GLuint tail_index[TAIL_LENGTH];
 
 /* static void update_timer(void) { */
 /*   int milliseconds = glfwGetTime() * 1000; */
@@ -136,6 +148,10 @@ make_resources(void) {
                                               tail,
                                               sizeof(tail));
 
+  g_gl_state.tail_index_buffer = make_buffer(GL_ELEMENT_ARRAY_BUFFER,
+                                             tail_index,
+                                             sizeof(tail_index));
+
   /* g_gl_state.element_buffer = make_buffer(GL_ELEMENT_ARRAY_BUFFER, */
   /*                                         elements, */
   /*                                         sizeof(elements)); */
@@ -160,57 +176,66 @@ make_resources(void) {
 
 
   /* Look up shader variable locations */
-  g_gl_state.attributes.head_position =
+  g_gl_state.head.attributes.position =
     glGetAttribLocation(g_gl_state.head_program, "position");
-  g_gl_state.attributes.tail_position =
+  g_gl_state.tail.attributes.position =
     glGetAttribLocation(g_gl_state.tail_program, "position");
+  g_gl_state.tail.attributes.index =
+    glGetAttribLocation(g_gl_state.tail_program, "index");
 
-
-  g_gl_state.uniforms.rotation =
+  g_gl_state.head.uniforms.rotation =
+    glGetUniformLocation(g_gl_state.head_program, "rotation");
+  g_gl_state.tail.uniforms.rotation =
     glGetUniformLocation(g_gl_state.tail_program, "rotation");
+  g_gl_state.tail.uniforms.tail_length =
+    glGetUniformLocation(g_gl_state.tail_program, "tail_length");
 
   return 1;
 }
 
 static void
 render(GLFWwindow *window) {
-  glUseProgram(g_gl_state.head_program);
-
-  /*  */
-
-  glEnableVertexAttribArray(g_gl_state.attributes.head_position);
-  glVertexAttribPointer(g_gl_state.attributes.head_position,
-                        3, GL_FLOAT, GL_FALSE,
-                        3*sizeof(float), 0);
-
-  /* glEnableVertexAttribArray(g_gl_state.attributes.color); */
-  /* glVertexAttribPointer(g_gl_state.attributes.color, */
-  /*                       3, GL_FLOAT, GL_FALSE, */
-  /*                       7*sizeof(float), (void*)(2*sizeof(float))); */
-
-  /* glEnableVertexAttribArray(g_gl_state.attributes.texcoord); */
-  /* glVertexAttribPointer(g_gl_state.attributes.texcoord, */
-  /*                       2, GL_FLOAT, GL_FALSE, */
-  /*                       7*sizeof(float), (void*)(5*sizeof(float))); */
-  /* glUniform1i(g_gl_state.uniforms.tex, 0); */
-
-  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
-  // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-  glDrawArrays(GL_POINTS, 0, 1);
 
 
   glUseProgram(g_gl_state.tail_program);
-  glUniform3f(g_gl_state.uniforms.rotation,
+  glUniform3f(g_gl_state.tail.uniforms.rotation,
+              g_gl_state.rotation.x,
+              g_gl_state.rotation.y,
+              g_gl_state.rotation.z);
+  glUniform1f(g_gl_state.tail.uniforms.tail_length, TAIL_LENGTH);
+
+  glEnableVertexAttribArray(g_gl_state.tail.attributes.position);
+  glVertexAttribPointer(g_gl_state.tail.attributes.position,
+                        3, GL_FLOAT, GL_FALSE,
+                        3*sizeof(float), 0);
+  glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.tail_index_buffer);
+  glVertexAttribPointer(g_gl_state.tail.attributes.index,
+                        1, GL_FLOAT, GL_FALSE,
+                        sizeof(float), 0);
+
+  glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.tail_vertex_buffer);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_gl_state.tail_index_buffer);
+  glDrawElements(GL_LINE_STRIP,
+                 TAIL_LENGTH,
+                 GL_UNSIGNED_INT,
+                 (void*)0);
+
+  glUseProgram(g_gl_state.head_program);
+  glUniform3f(g_gl_state.head.uniforms.rotation,
               g_gl_state.rotation.x,
               g_gl_state.rotation.y,
               g_gl_state.rotation.z);
 
-  glEnableVertexAttribArray(g_gl_state.attributes.tail_position);
-  glVertexAttribPointer(g_gl_state.attributes.tail_position,
-                        TAIL_LENGTH, GL_FLOAT, GL_FALSE,
-                        TAIL_LENGTH*sizeof(float), 0);
-  glDrawArrays(GL_POINTS, 0, TAIL_LENGTH);
+  glEnableVertexAttribArray(g_gl_state.head.attributes.position);
+  glVertexAttribPointer(g_gl_state.head.attributes.position,
+                        3, GL_FLOAT, GL_FALSE,
+                        3*sizeof(float), 0);
+  glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer);
+  glDrawArrays(GL_POINTS, 0, 1);
+
+  glDisableVertexAttribArray(g_gl_state.head.attributes.position);
 
   glfwSwapBuffers(window);
 }
@@ -352,36 +377,34 @@ main() {
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
 
-  make_resources();
-
   float dt = 0.005;
 
   vec3 initial = {0.0, 1.0, 0.0};
   vec3 current = initial;
 
   for (int i = 0; i < TAIL_LENGTH; i++) {
+    tail_index[i] = i;
     tail[i].x = 0.0f;
     tail[i].y = 0.0f;
     tail[i].z = 0.0f;
   }
   int tail_index = 0;
 
+  make_resources();
+
   while (!glfwWindowShouldClose(window)) {
-    //memset(g_gl_state.backbuffer, 0, sizeof(g_gl_state.backbuffer));
     for (int i = 0; i < STEPS_PER_FRAME; i++) {
       tail[tail_index] = current;
       tail_index = (tail_index+1) % TAIL_LENGTH;
 
       current = rk4(current, dt);
-      position[0] = current.x + 10;
-      position[1] = current.y + 10;
-      position[2] = current.z;
-      // printf("%f %f %f\n", current.x, current.y, current.z);
-      glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer);
-      glBufferData(GL_ARRAY_BUFFER,
-                   sizeof(position), position, GL_DYNAMIC_DRAW);
-
     }
+    position[0] = tail[tail_index].x;
+    position[1] = tail[tail_index].y;
+    position[2] = tail[tail_index].z;
+    glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER,
+                 sizeof(position), position, GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.tail_vertex_buffer);
     glBufferData(GL_ARRAY_BUFFER,

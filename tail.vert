@@ -29,10 +29,12 @@ mat4 translate(float x, float y, float z) {
               x, y, z, 1.0);
 }
 
-mat4 rotate_x(float theta) {
+mat4 rotate_x(float t) {
+  float ct = cos(t);
+  float st = sin(t);
   return mat4(1.0, 0.0, 0.0, 0.0,
-              0.0, cos(theta), sin(theta), 0.0,
-              0.0, -sin(theta), cos(theta), 0.0,
+              0.0, ct, st, 0.0,
+              0.0, -st, ct, 0.0,
               0.0, 0.0, 0.0, 1.0);
 }
 
