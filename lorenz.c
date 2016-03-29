@@ -30,7 +30,7 @@ static struct {
 
   struct {
     struct {
-      GLuint rotation;
+      GLuint rotation, translation, color;
     } uniforms;
     struct {
       GLuint position;
@@ -190,11 +190,15 @@ make_resources(void) {
 
   g_gl_state.head.uniforms.rotation =
     glGetUniformLocation(g_gl_state.head_program, "rotation");
+  g_gl_state.head.uniforms.translation =
+    glGetUniformLocation(g_gl_state.head_program, "translation");
+  g_gl_state.head.uniforms.color =
+    glGetUniformLocation(g_gl_state.head_program, "color");
+
   g_gl_state.tail.uniforms.rotation =
     glGetUniformLocation(g_gl_state.tail_program, "rotation");
     g_gl_state.tail.uniforms.translation =
     glGetUniformLocation(g_gl_state.tail_program, "translation");
-
   g_gl_state.tail.uniforms.tail_length =
     glGetUniformLocation(g_gl_state.tail_program, "tail_length");
   g_gl_state.tail.uniforms.color =
@@ -285,20 +289,26 @@ render(GLFWwindow *window) {
 
   }
 
-  /* glUseProgram(g_gl_state.head_program); */
-  /* glUniform3f(g_gl_state.head.uniforms.rotation, */
-  /*             g_gl_state.rotation.x, */
-  /*             g_gl_state.rotation.y, */
-  /*             g_gl_state.rotation.z); */
+  glUseProgram(g_gl_state.head_program);
+  glUniform3f(g_gl_state.head.uniforms.rotation,
+              g_gl_state.rotation.x,
+              g_gl_state.rotation.y,
+              g_gl_state.rotation.z);
+  glUniform3f(g_gl_state.head.uniforms.translation,
+              g_gl_state.translation.x,
+              g_gl_state.translation.y,
+              g_gl_state.translation.z);
 
-  /* glEnableVertexAttribArray(g_gl_state.head.attributes.position); */
-  /* glVertexAttribPointer(g_gl_state.head.attributes.position, */
-  /*                       3, GL_FLOAT, GL_FALSE, */
-  /*                       3*sizeof(float), 0); */
-  /* glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer); */
-  /* glDrawArrays(GL_POINTS, 0, 1); */
+  glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer);
+  glEnableVertexAttribArray(g_gl_state.head.attributes.position);
+  glVertexAttribPointer(g_gl_state.head.attributes.position,
+                        3, GL_FLOAT, GL_FALSE,
+                        3*sizeof(float), 0);
+  glPointSize(8.0f);
+  glDrawArrays(GL_POINTS, 0, COUNT);
 
   glDisableVertexAttribArray(g_gl_state.tail.attributes.position);
+  glDisableVertexAttribArray(g_gl_state.head.attributes.position);
 
   glfwSwapBuffers(window);
 }
@@ -518,15 +528,15 @@ main() {
         position[3*c + 0] = current[c].x;
         position[3*c + 1] = current[c].y;
         position[3*c + 2] = current[c].z;
-        /* glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer); */
-        /* glBufferData(GL_ARRAY_BUFFER, */
-        /*              sizeof(position), position, GL_DYNAMIC_DRAW); */
-
       }
     }
+
     glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.tail_vertex_buffer);
     glBufferData(GL_ARRAY_BUFFER,
                  sizeof(tail), tail, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER,
+                 sizeof(position), position, GL_DYNAMIC_DRAW);
 
     render(window);
 

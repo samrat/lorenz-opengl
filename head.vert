@@ -3,6 +3,8 @@
 in vec3 position;
 
 uniform vec3 rotation;
+uniform vec3 translation;
+
 
 mat4 view_frustum(float angle_of_view,
                   float aspect_ratio,
@@ -59,15 +61,12 @@ mat4 rotate_z(float t) {
     );
 }
 
-
-
 void main() {
   gl_Position = view_frustum(radians(45.0), 4.0/3.0, 0.0, 10.0)
-    // * translate(cos(timer), 0.0, 3.0+sin(timer))
+    * translate(translation.x, translation.y, translation.z)
     * rotate_x(rotation.x)
     * rotate_y(rotation.y)
     * rotate_z(rotation.z)
     * scale(1/25.0, 1.0/25.0, 1.0/25.0)
     * vec4(position, 1.0);
-  gl_PointSize = 160.0;
 }
