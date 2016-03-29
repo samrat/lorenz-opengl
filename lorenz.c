@@ -13,7 +13,7 @@
 #define WIDTH 800
 #define HEIGHT 600
 
-#define COUNT 1
+#define COUNT 5
 #define STEPS_PER_FRAME 3
 #define TAIL_LENGTH 1024
 
@@ -62,6 +62,7 @@ static float position[3*COUNT];
 
 vec3 tail[TAIL_LENGTH*COUNT];
 GLuint tail_index[TAIL_LENGTH*COUNT];
+int tail_indices[COUNT];
 
 /* static void update_timer(void) { */
 /*   int milliseconds = glfwGetTime() * 1000; */
@@ -251,6 +252,22 @@ render(GLFWwindow *window) {
     float color[3];
     pick_color(c, (float *)&color);
     glUniform3fv(g_gl_state.tail.uniforms.color, 1, color);
+
+    /* Shift index to avoid creating a closed loop. */
+    tail_index[offset] = tail_indices[c];
+    for (int i = 1; i < TAIL_LENGTH; i++) {
+      int curr = tail_index[offset+i-1] + 1;
+      if (curr == (c+1)*TAIL_LENGTH) {
+        curr = c*TAIL_LENGTH;
+      }
+      tail_index[offset+i] = curr;
+    }
+
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 sizeof(tail_index),
+                 tail_index,
+                 GL_DYNAMIC_DRAW);
+
     glDrawElements(GL_LINE_STRIP,
                    TAIL_LENGTH,
                    GL_UNSIGNED_INT,
@@ -430,7 +447,7 @@ main() {
 
   vec3 initial[COUNT] = {{0.0, 1.2, 0.2},
                          {1.0, 0.04, 1.0},
-                         {0.5, 1.0, 0.0},
+                         {-0.5, -1.0, 0.0},
                          {0.01, 0.6, 0.2},
                          {0.01, -0.5, 0.2}};
   vec3 current[COUNT];
@@ -444,8 +461,6 @@ main() {
     tail[i].y = 0.0f;
     tail[i].z = 0.0f;
   }
-
-  int tail_indices[COUNT];
 
   for (int i = 0; i < COUNT; i++) {
     tail_indices[i] = i*TAIL_LENGTH;
