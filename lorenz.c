@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <stdbool.h>
 
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
@@ -11,8 +13,9 @@
 #define WIDTH 800
 #define HEIGHT 600
 
-#define STEPS_PER_FRAME 5
-#define TAIL_LENGTH 1024
+#define COUNT 5
+#define STEPS_PER_FRAME 3
+#define TAIL_LENGTH 512
 
 static struct {
   GLuint vertex_buffer, element_buffer;
@@ -35,7 +38,7 @@ static struct {
 
   struct {
     struct {
-      GLuint rotation, tail_length;
+      GLuint rotation, tail_length, color;
     } uniforms;
     struct {
       GLuint position, index;
@@ -48,14 +51,14 @@ static struct {
 
   vec3 rotation;
 
+  bool pause;
+
 } g_gl_state;
 
-static float position[] = {     /* head position */
-  0.0, 0.0, 0.0,
-};
+static float position[3*COUNT];
 
-vec3 tail[TAIL_LENGTH];
-GLuint tail_index[TAIL_LENGTH];
+vec3 tail[TAIL_LENGTH*COUNT];
+GLuint tail_index[TAIL_LENGTH*COUNT];
 
 /* static void update_timer(void) { */
 /*   int milliseconds = glfwGetTime() * 1000; */
@@ -152,10 +155,6 @@ make_resources(void) {
                                              tail_index,
                                              sizeof(tail_index));
 
-  /* g_gl_state.element_buffer = make_buffer(GL_ELEMENT_ARRAY_BUFFER, */
-  /*                                         elements, */
-  /*                                         sizeof(elements)); */
-
   /* Compile GLSL program  */
   g_gl_state.projection_vertex_shader = make_shader(GL_VERTEX_SHADER,
                                                     "project.vert");
@@ -189,15 +188,38 @@ make_resources(void) {
     glGetUniformLocation(g_gl_state.tail_program, "rotation");
   g_gl_state.tail.uniforms.tail_length =
     glGetUniformLocation(g_gl_state.tail_program, "tail_length");
+  g_gl_state.tail.uniforms.color =
+    glGetUniformLocation(g_gl_state.tail_program, "color");
 
   return 1;
+}
+
+static void pick_color(int i, float *color) {
+  float colors[] = {
+    0x8d, 0xd3, 0xc7,
+    0xff, 0xff, 0xb3,
+    0xbe, 0xba, 0xda,
+    0xfb, 0x80, 0x72,
+    0x80, 0xb1, 0xd3,
+    0xfd, 0xb4, 0x62,
+    0xb3, 0xde, 0x69,
+    0xfc, 0xcd, 0xe5,
+    0xd9, 0xd9, 0xd9,
+    0xbc, 0x80, 0xbd,
+    0xcc, 0xeb, 0xc5,
+    0xff, 0xed, 0x6f,
+    0xff, 0xff, 0xff
+  };
+
+  for (int c = 0; c < 3; c++) {
+    color[c] = colors[3*i + c] / 255.0;
+  }
 }
 
 static void
 render(GLFWwindow *window) {
   glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
-
 
   glUseProgram(g_gl_state.tail_program);
   glUniform3f(g_gl_state.tail.uniforms.rotation,
@@ -217,25 +239,36 @@ render(GLFWwindow *window) {
 
   glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.tail_vertex_buffer);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_gl_state.tail_index_buffer);
-  glDrawElements(GL_LINE_STRIP,
-                 TAIL_LENGTH,
-                 GL_UNSIGNED_INT,
-                 (void*)0);
-
-  glUseProgram(g_gl_state.head_program);
-  glUniform3f(g_gl_state.head.uniforms.rotation,
-              g_gl_state.rotation.x,
-              g_gl_state.rotation.y,
-              g_gl_state.rotation.z);
-
-  glEnableVertexAttribArray(g_gl_state.head.attributes.position);
-  glVertexAttribPointer(g_gl_state.head.attributes.position,
+  glVertexAttribPointer(g_gl_state.tail.attributes.position,
                         3, GL_FLOAT, GL_FALSE,
                         3*sizeof(float), 0);
-  glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer);
-  glDrawArrays(GL_POINTS, 0, 1);
 
-  glDisableVertexAttribArray(g_gl_state.head.attributes.position);
+  for (int c = 0; c < COUNT; c++) {
+    int offset = c * TAIL_LENGTH;
+    float color[3];
+    pick_color(c, (float *)&color);
+    glUniform3fv(g_gl_state.tail.uniforms.color, 1, color);
+    glDrawElements(GL_POINTS,
+                   TAIL_LENGTH,
+                   GL_UNSIGNED_INT,
+                   (GLvoid *)(offset*sizeof(GLuint)));
+
+  }
+
+  /* glUseProgram(g_gl_state.head_program); */
+  /* glUniform3f(g_gl_state.head.uniforms.rotation, */
+  /*             g_gl_state.rotation.x, */
+  /*             g_gl_state.rotation.y, */
+  /*             g_gl_state.rotation.z); */
+
+  /* glEnableVertexAttribArray(g_gl_state.head.attributes.position); */
+  /* glVertexAttribPointer(g_gl_state.head.attributes.position, */
+  /*                       3, GL_FLOAT, GL_FALSE, */
+  /*                       3*sizeof(float), 0); */
+  /* glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer); */
+  /* glDrawArrays(GL_POINTS, 0, 1); */
+
+  glDisableVertexAttribArray(g_gl_state.tail.attributes.position);
 
   glfwSwapBuffers(window);
 }
@@ -304,6 +337,10 @@ key_callback(GLFWwindow *window, int key,
     } break;
     case GLFW_KEY_E: {
       g_gl_state.rotation.z -= 0.01;
+    } break;
+
+    case GLFW_KEY_P: {
+      g_gl_state.pause = !g_gl_state.pause;
     } break;
     }
   }
@@ -379,33 +416,54 @@ main() {
 
   float dt = 0.005;
 
-  vec3 initial = {0.0, 1.0, 0.0};
-  vec3 current = initial;
+  vec3 initial[COUNT] = {{0.0, 1.2, 0.2},
+                         {1.0, 0.04, 1.0},
+                         {0.5, 1.0, 0.0},
+                         {0.01, 0.6, 0.2},
+                         {0.01, -0.5, 0.2}};
+  vec3 current[COUNT];
+  for (int i = 0; i < COUNT; i++) {
+    current[i] = initial[i];
+  }
 
-  for (int i = 0; i < TAIL_LENGTH; i++) {
+  for (int i = 0; i < TAIL_LENGTH*COUNT; i++) {
     tail_index[i] = i;
     tail[i].x = 0.0f;
     tail[i].y = 0.0f;
     tail[i].z = 0.0f;
   }
-  int tail_index = 0;
+
+  int tail_indices[COUNT];
+
+  for (int i = 0; i < COUNT; i++) {
+    tail_indices[i] = i*TAIL_LENGTH;
+  }
 
   make_resources();
 
+  g_gl_state.pause = false;
   while (!glfwWindowShouldClose(window)) {
-    for (int i = 0; i < STEPS_PER_FRAME; i++) {
-      tail[tail_index] = current;
-      tail_index = (tail_index+1) % TAIL_LENGTH;
+    if (!g_gl_state.pause) {
+      for (int c = 0; c < COUNT; c++) {
+        for (int i = 0; i < STEPS_PER_FRAME; i++) {
+          tail[tail_indices[c]] = current[c];
+          tail_indices[c] = tail_indices[c]+1;
 
-      current = rk4(current, dt);
+          if (tail_indices[c] == (c+1)*TAIL_LENGTH) {
+            tail_indices[c] = c*TAIL_LENGTH;
+          }
+
+          current[c] = rk4(current[c], dt);
+        }
+        position[3*c + 0] = current[c].x;
+        position[3*c + 1] = current[c].y;
+        position[3*c + 2] = current[c].z;
+        /* glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer); */
+        /* glBufferData(GL_ARRAY_BUFFER, */
+        /*              sizeof(position), position, GL_DYNAMIC_DRAW); */
+
+      }
     }
-    position[0] = tail[tail_index].x;
-    position[1] = tail[tail_index].y;
-    position[2] = tail[tail_index].z;
-    glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER,
-                 sizeof(position), position, GL_DYNAMIC_DRAW);
-
     glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.tail_vertex_buffer);
     glBufferData(GL_ARRAY_BUFFER,
                  sizeof(tail), tail, GL_DYNAMIC_DRAW);
