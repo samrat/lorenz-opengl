@@ -40,7 +40,8 @@ static struct {
 
   struct {
     struct {
-      GLuint rotation, tail_length, color;
+      GLuint rotation, translation;
+      GLuint tail_length, color;
     } uniforms;
     struct {
       GLuint position, index;
@@ -52,6 +53,7 @@ static struct {
   double xpos, ypos;
 
   vec3 rotation;
+  vec3 translation;
   mouse_button button;
 
   bool pause;
@@ -190,6 +192,9 @@ make_resources(void) {
     glGetUniformLocation(g_gl_state.head_program, "rotation");
   g_gl_state.tail.uniforms.rotation =
     glGetUniformLocation(g_gl_state.tail_program, "rotation");
+    g_gl_state.tail.uniforms.translation =
+    glGetUniformLocation(g_gl_state.tail_program, "translation");
+
   g_gl_state.tail.uniforms.tail_length =
     glGetUniformLocation(g_gl_state.tail_program, "tail_length");
   g_gl_state.tail.uniforms.color =
@@ -230,6 +235,11 @@ render(GLFWwindow *window) {
               g_gl_state.rotation.x,
               g_gl_state.rotation.y,
               g_gl_state.rotation.z);
+  glUniform3f(g_gl_state.tail.uniforms.translation,
+              g_gl_state.translation.x,
+              g_gl_state.translation.y,
+              g_gl_state.translation.z);
+
   glUniform1f(g_gl_state.tail.uniforms.tail_length, TAIL_LENGTH);
 
   glEnableVertexAttribArray(g_gl_state.tail.attributes.position);
@@ -444,6 +454,13 @@ main() {
   glBindVertexArray(vao);
 
   float dt = 0.005;
+
+  g_gl_state.rotation.x = 1.65f;
+  g_gl_state.rotation.y = 3.08f;
+  g_gl_state.rotation.z = -0.93f;
+  g_gl_state.translation.x = 0.0f;
+  g_gl_state.translation.y = 0.075f;
+  g_gl_state.translation.z = 1.81f;
 
   vec3 initial[COUNT] = {{0.0, 1.2, 0.2},
                          {1.0, 0.04, 1.0},

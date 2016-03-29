@@ -4,6 +4,7 @@ in vec3 position;
 
 uniform float timer;
 uniform vec3 rotation;
+uniform vec3 translation;
 
 mat4 view_frustum(float angle_of_view,
                   float aspect_ratio,
@@ -63,7 +64,7 @@ mat4 rotate_z(float t) {
 
 void main() {
   gl_Position = view_frustum(radians(45.0), 4.0/3.0, 0.0, 10.0)
-    * translate(0, 0.075, 1.81)
+    * translate(translation.x, translation.y, translation.z)
     * rotate_x(rotation.x)
     * rotate_y(rotation.y)
     * rotate_z(rotation.z)
