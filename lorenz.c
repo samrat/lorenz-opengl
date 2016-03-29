@@ -23,6 +23,7 @@ static struct {
   GLuint vertex_buffer, element_buffer;
   GLuint tail_vertex_buffer;
   GLuint tail_index_buffer;
+  GLuint colors_buffer;
 
   GLuint projection_vertex_shader;
   GLuint head_vertex_shader, head_fragment_shader, head_program;
@@ -30,10 +31,10 @@ static struct {
 
   struct {
     struct {
-      GLuint rotation, translation, color;
+      GLuint rotation, translation;
     } uniforms;
     struct {
-      GLuint position;
+      GLuint position, color;
     } attributes;
 
   } head;
@@ -59,6 +60,23 @@ static struct {
   bool pause;
 
 } g_gl_state;
+
+int colors[] = {
+  0x8d, 0xd3, 0xc7,
+  0xff, 0xff, 0xb3,
+  0xbe, 0xba, 0xda,
+  0xfb, 0x80, 0x72,
+  0x80, 0xb1, 0xd3,
+  0xfd, 0xb4, 0x62,
+  0xb3, 0xde, 0x69,
+  0xfc, 0xcd, 0xe5,
+  0xd9, 0xd9, 0xd9,
+  0xbc, 0x80, 0xbd,
+  0xcc, 0xeb, 0xc5,
+  0xff, 0xed, 0x6f,
+  0xff, 0xff, 0xff
+};
+
 
 static float position[3*COUNT];
 
@@ -161,6 +179,9 @@ make_resources(void) {
                                              tail_index,
                                              sizeof(tail_index));
 
+  g_gl_state.colors_buffer = make_buffer(GL_ARRAY_BUFFER,
+                                         colors,
+                                         sizeof(colors));
   /* Compile GLSL program  */
   g_gl_state.projection_vertex_shader = make_shader(GL_VERTEX_SHADER,
                                                     "project.vert");
@@ -183,17 +204,16 @@ make_resources(void) {
   /* Look up shader variable locations */
   g_gl_state.head.attributes.position =
     glGetAttribLocation(g_gl_state.head_program, "position");
+  g_gl_state.head.attributes.color =
+    glGetAttribLocation(g_gl_state.head_program, "color");
+
   g_gl_state.tail.attributes.position =
     glGetAttribLocation(g_gl_state.tail_program, "position");
-  g_gl_state.tail.attributes.index =
-    glGetAttribLocation(g_gl_state.tail_program, "index");
 
   g_gl_state.head.uniforms.rotation =
     glGetUniformLocation(g_gl_state.head_program, "rotation");
   g_gl_state.head.uniforms.translation =
     glGetUniformLocation(g_gl_state.head_program, "translation");
-  g_gl_state.head.uniforms.color =
-    glGetUniformLocation(g_gl_state.head_program, "color");
 
   g_gl_state.tail.uniforms.rotation =
     glGetUniformLocation(g_gl_state.tail_program, "rotation");
@@ -208,21 +228,6 @@ make_resources(void) {
 }
 
 static void pick_color(int i, float *color) {
-  float colors[] = {
-    0x8d, 0xd3, 0xc7,
-    0xff, 0xff, 0xb3,
-    0xbe, 0xba, 0xda,
-    0xfb, 0x80, 0x72,
-    0x80, 0xb1, 0xd3,
-    0xfd, 0xb4, 0x62,
-    0xb3, 0xde, 0x69,
-    0xfc, 0xcd, 0xe5,
-    0xd9, 0xd9, 0xd9,
-    0xbc, 0x80, 0xbd,
-    0xcc, 0xeb, 0xc5,
-    0xff, 0xed, 0x6f,
-    0xff, 0xff, 0xff
-  };
 
   for (int c = 0; c < 3; c++) {
     color[c] = colors[3*i + c] / 255.0;
@@ -299,6 +304,12 @@ render(GLFWwindow *window) {
               g_gl_state.translation.y,
               g_gl_state.translation.z);
 
+  glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.colors_buffer);
+  glEnableVertexAttribArray(g_gl_state.head.attributes.color);
+  glVertexAttribPointer(g_gl_state.head.attributes.color,
+                        3, GL_UNSIGNED_INT, GL_FALSE,
+                        3*sizeof(float), 0);
+
   glBindBuffer(GL_ARRAY_BUFFER, g_gl_state.vertex_buffer);
   glEnableVertexAttribArray(g_gl_state.head.attributes.position);
   glVertexAttribPointer(g_gl_state.head.attributes.position,
@@ -307,8 +318,8 @@ render(GLFWwindow *window) {
   glPointSize(8.0f);
   glDrawArrays(GL_POINTS, 0, COUNT);
 
-  glDisableVertexAttribArray(g_gl_state.tail.attributes.position);
-  glDisableVertexAttribArray(g_gl_state.head.attributes.position);
+  /* glDisableVertexAttribArray(g_gl_state.tail.attributes.position); */
+  /* glDisableVertexAttribArray(g_gl_state.head.attributes.position); */
 
   glfwSwapBuffers(window);
 }

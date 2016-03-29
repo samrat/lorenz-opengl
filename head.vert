@@ -1,6 +1,9 @@
 #version 330
 
 in vec3 position;
+in vec3 color;
+
+out vec3 Color;
 
 uniform vec3 rotation;
 uniform vec3 translation;
@@ -69,4 +72,5 @@ void main() {
     * rotate_z(rotation.z)
     * scale(1/25.0, 1.0/25.0, 1.0/25.0)
     * vec4(position, 1.0);
+  Color = color;
 }
