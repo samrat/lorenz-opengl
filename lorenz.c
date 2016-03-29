@@ -388,6 +388,10 @@ mouse_button_callback(GLFWwindow *window,
       g_gl_state.button = BUTTON_LEFT;
       glfwGetCursorPos(window, &g_gl_state.xpos, &g_gl_state.ypos);
     } break;
+    case GLFW_MOUSE_BUTTON_RIGHT: {
+      g_gl_state.button = BUTTON_RIGHT;
+      glfwGetCursorPos(window, &g_gl_state.xpos, &g_gl_state.ypos);
+    } break;
     }
   }
 
@@ -399,7 +403,8 @@ mouse_button_callback(GLFWwindow *window,
 
 static void
 cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
-  if (g_gl_state.button == BUTTON_LEFT) {
+  switch (g_gl_state.button) {
+  case BUTTON_LEFT: {
     double deltax = xpos - g_gl_state.xpos;
     double deltay = ypos - g_gl_state.ypos;
 
@@ -410,8 +415,19 @@ cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
       g_gl_state.rotation.y += deltax / 8192;
     }
     g_gl_state.rotation.x += deltay / 8192;
+  } break;
+  case BUTTON_RIGHT: {
+    double deltax = xpos - g_gl_state.xpos;
+    double deltay = ypos - g_gl_state.ypos;
 
-
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+      g_gl_state.translation.z += deltay / (1<<14);
+    }
+    else {
+      g_gl_state.translation.x += -deltax / (1<<14);
+    }
+    g_gl_state.translation.y += deltay / (1<<14);
+  } break;
   }
 }
 
