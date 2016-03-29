@@ -13,9 +13,11 @@
 #define WIDTH 800
 #define HEIGHT 600
 
-#define COUNT 5
+#define COUNT 1
 #define STEPS_PER_FRAME 3
-#define TAIL_LENGTH 512
+#define TAIL_LENGTH 1024
+
+typedef enum {BUTTON_NONE, BUTTON_LEFT, BUTTON_MIDDLE, BUTTON_RIGHT} mouse_button;
 
 static struct {
   GLuint vertex_buffer, element_buffer;
@@ -50,6 +52,7 @@ static struct {
   double xpos, ypos;
 
   vec3 rotation;
+  mouse_button button;
 
   bool pause;
 
@@ -248,7 +251,7 @@ render(GLFWwindow *window) {
     float color[3];
     pick_color(c, (float *)&color);
     glUniform3fv(g_gl_state.tail.uniforms.color, 1, color);
-    glDrawElements(GL_POINTS,
+    glDrawElements(GL_LINE_STRIP,
                    TAIL_LENGTH,
                    GL_UNSIGNED_INT,
                    (GLvoid *)(offset*sizeof(GLuint)));
@@ -355,28 +358,36 @@ mouse_button_callback(GLFWwindow *window,
   if (action == GLFW_PRESS) {
     switch(button) {
     case GLFW_MOUSE_BUTTON_LEFT: {
+      g_gl_state.button = BUTTON_LEFT;
       glfwGetCursorPos(window, &g_gl_state.xpos, &g_gl_state.ypos);
     } break;
     }
   }
 
   if (action == GLFW_RELEASE) {
-    switch (button) {
-    case GLFW_MOUSE_BUTTON_LEFT: {
-      double xpos, ypos;
-      glfwGetCursorPos(window, &xpos, &ypos);
-
-      double deltax = xpos - g_gl_state.xpos;
-      double deltay = ypos - g_gl_state.ypos;
-
-      g_gl_state.rotation.x = -deltax / 1000;
-      g_gl_state.rotation.y = deltay / 1000;
-    } break;
-
-    }
+    g_gl_state.button = BUTTON_NONE;
   }
 
 }
+
+static void
+cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
+  if (g_gl_state.button == BUTTON_LEFT) {
+    double deltax = xpos - g_gl_state.xpos;
+    double deltay = ypos - g_gl_state.ypos;
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+      g_gl_state.rotation.z += deltax / 8192;
+    }
+    else {
+      g_gl_state.rotation.y += deltax / 8192;
+    }
+    g_gl_state.rotation.x += deltay / 8192;
+
+
+  }
+}
+
 
 int
 main() {
@@ -404,6 +415,7 @@ main() {
 
   glfwSetKeyCallback(window, key_callback);
   glfwSetMouseButtonCallback(window, mouse_button_callback);
+  glfwSetCursorPosCallback(window, cursor_position_callback);
 
   if (gl3wInit() != 0) {
     fprintf(stderr, "GL3W: failed to initialize\n");

@@ -63,7 +63,7 @@ mat4 rotate_z(float t) {
 
 void main() {
   gl_Position = view_frustum(radians(45.0), 4.0/3.0, 0.0, 10.0)
-    // * translate(cos(timer), 0.0, 3.0+sin(timer))
+    * translate(0, 0.075, 1.81)
     * rotate_x(rotation.x)
     * rotate_y(rotation.y)
     * rotate_z(rotation.z)
