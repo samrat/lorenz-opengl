@@ -319,8 +319,9 @@ render(GLFWwindow *window) {
   glPointSize(8.0f);
   glDrawArrays(GL_POINTS, 0, COUNT);
 
-  /* glDisableVertexAttribArray(g_gl_state.tail.attributes.position); */
-  /* glDisableVertexAttribArray(g_gl_state.head.attributes.position); */
+  glDisableVertexAttribArray(g_gl_state.tail.attributes.position);
+  glDisableVertexAttribArray(g_gl_state.head.attributes.position);
+  glDisableVertexAttribArray(g_gl_state.head.attributes.color);
 
   glfwSwapBuffers(window);
 }
