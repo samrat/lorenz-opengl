@@ -1,8 +1,8 @@
-CFLAGS =  -g -Wall --pedantic -std=c99 -Igl3w
+CFLAGS =  -g -Wall --pedantic -std=c11 -Igl3w
 LIBS = -lGL -lglfw -ldl -lm
 
-lorenz: vec3.c lorenz.c gl3w/gl3w.c
-	gcc $(CFLAGS) $^ -o $@ $(LIBS)
+lorenz: vec3.c lorenz.c
+	gcc $(CFLAGS) lorenz.c gl3w/gl3w.c -o $@ $(LIBS)
 
 clean:
 	$(RM) lorenz
