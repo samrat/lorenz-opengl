@@ -16,6 +16,9 @@
 #define COUNT 5
 #define STEPS_PER_FRAME 3
 #define TAIL_LENGTH 1024
+#define SIGMA 10.0f
+#define BETA (-8.0f/3.0f)
+#define RHO 28.0f
 
 typedef enum {BUTTON_NONE, BUTTON_LEFT, BUTTON_MIDDLE, BUTTON_RIGHT} mouse_button;
 
@@ -48,8 +51,6 @@ static struct {
       GLuint position, index;
     } attributes;
   } tail;
-
-  unsigned char backbuffer[HEIGHT][WIDTH][4];
 
   double xpos, ypos;
 
@@ -334,9 +335,9 @@ F(vec3 state) {
     z' = (-8/3)z + xy
   */
 
-  result.x = 10 * (state.y - state.x);
-  result.y = 28*state.x - state.y - state.x*state.z;
-  result.z = (-8.0f/3.0f)*state.z + state.x*state.y;
+  result.x = SIGMA * (state.y - state.x);
+  result.y = RHO*state.x - state.y - state.x*state.z;
+  result.z = BETA*state.z + state.x*state.y;
 
   return result;
 }
@@ -449,6 +450,7 @@ cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
     }
     g_gl_state.translation.y += deltay / (1<<14);
   } break;
+  default: return;
   }
 }
 
