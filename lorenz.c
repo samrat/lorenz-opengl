@@ -183,9 +183,6 @@ make_resources(void) {
                                          colors,
                                          sizeof(colors));
   /* Compile GLSL program  */
-  g_gl_state.projection_vertex_shader = make_shader(GL_VERTEX_SHADER,
-                                                    "project.vert");
-
   g_gl_state.head_vertex_shader = make_shader(GL_VERTEX_SHADER,
                                               "head.vert");
   g_gl_state.head_fragment_shader = make_shader(GL_FRAGMENT_SHADER,
