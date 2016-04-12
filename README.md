@@ -19,5 +19,6 @@ re-position the system.
 ## TODO
 - Get rid of code duplication of 3D math-related helper functions in
   the head/tail vertex shaders.
+- Improve controls. Right now, it does not feel very intuitive.
 
 [wikipedia]: https://en.wikipedia.org/wiki/Lorenz_system
