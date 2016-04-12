@@ -323,7 +323,7 @@ render(GLFWwindow *window) {
 }
 
 vec3
-F(vec3 state) {
+lorenz(vec3 state) {
   vec3 result;
 
   /*
@@ -353,10 +353,10 @@ rk4_weighted_avg(vec3 a, vec3 b, vec3 c, vec3 d) {
 /* Compute next step of autonomous differential equation. */
 vec3
 rk4(vec3 current, float dt) {
-  vec3 k1 = F(current);
-  vec3 k2 = F(vec3_add(current, vec3_scale(dt/2, k1)));
-  vec3 k3 = F(vec3_add(current, vec3_scale(dt/2, k2)));
-  vec3 k4 = F(vec3_add(current, vec3_scale(dt, k3)));
+  vec3 k1 = lorenz(current);
+  vec3 k2 = lorenz(vec3_add(current, vec3_scale(dt/2, k1)));
+  vec3 k3 = lorenz(vec3_add(current, vec3_scale(dt/2, k2)));
+  vec3 k4 = lorenz(vec3_add(current, vec3_scale(dt, k3)));
 
   vec3 k = rk4_weighted_avg(k1, k2, k3, k4);
 
