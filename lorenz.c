@@ -354,6 +354,7 @@ rk4_weighted_avg(vec3 a, vec3 b, vec3 c, vec3 d) {
   return result;
 }
 
+/* Compute next step of autonomous differential equation. */
 vec3
 rk4(vec3 current, float dt) {
   vec3 k1 = F(current);
