@@ -84,12 +84,6 @@ vec3 tail[TAIL_LENGTH*COUNT];
 GLuint tail_index[TAIL_LENGTH*COUNT];
 int tail_indices[COUNT];
 
-/* static void update_timer(void) { */
-/*   int milliseconds = glfwGetTime() * 1000; */
-/*   g_gl_state.timer = (float)milliseconds * 0.001f; */
-/* } */
-
-
 static GLuint
 make_buffer(GLenum target,
             const void *buffer_data,
