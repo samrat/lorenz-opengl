@@ -27,7 +27,6 @@ static struct {
   GLuint tail_index_buffer;
   GLuint colors_buffer;
 
-  GLuint projection_vertex_shader;
   GLuint head_vertex_shader, head_fragment_shader, head_program;
   GLuint tail_vertex_shader, tail_fragment_shader, tail_program;
 
@@ -142,7 +141,6 @@ make_program(GLuint vertex_shader, GLuint fragment_shader) {
   GLint program_ok;
 
   GLuint program = glCreateProgram();
-  // glAttachShader(program, g_gl_state.projection_vertex_shader);
   glAttachShader(program, vertex_shader);
   glAttachShader(program, fragment_shader);
   glBindFragDataLocation(program, 0, "outColor");
